@@ -1,0 +1,39 @@
+##########################################################################
+## Sysmon Dual Process Behavior with Clipboard Monitoring (Event ID 24) ##
+##########################################################################
+
+We noticed that on some computers, Sysmon64 had 2 running processes. One is the primary instance (triggered by the Windows service running as SYSTEM), and a secondary instance launched by it with the parameter -z sysclipppc[Hash] (e.g., "C:\windows\sysmon64.exe" -z sysclipppcIF3986D8EED87AAB).
+After research and consultation with AI tools pointing to this being a security issue or malware, we confirmed it is not malicious.
+
+Whenever Event ID 24 (ClipboardChange) is present in the Sysmon configuration file—whether explicitly included or excluded—Sysmon will spawn a second process for each logged-in user to monitor clipboard activity. This is normal and expected behavior. The -z parameter refers to "System Clipboard RPC" (sysclipppc), though this parameter is undocumented in official Sysmon documentation at the time of this writing.
+This secondary process is triggered when the ClipboardChange rule exists in your config, for example:
+
+-- Code --
+    <!--SYSMON EVENT ID 24 : CLIPBOARD EVENT MONITORING [ClipboardChange]-->
+        <!--EVENT 24: "Clipboard changed"-->
+        <!--COMMENT:    Sandbox usage.  Sysmon can capture the contents of clipboard events.
+            An  example of what could be a production usage on restricted desktops is provided below, but it is commented-out. -->
+            
+        <!--DATA: EventType, UtcTime, ProcessGuid, ProcessId, Image, Session, ClientInfo, Hashes, Archived -->
+
+    <RuleGroup name="" groupRelation="or">
+        <ClipboardChange onmatch="exclude" />
+    </RuleGroup>
+-- EOF Code --
+Or even when explicitly excluding it:
+
+-- Code --
+<RuleGroup name="" groupRelation="or">
+    <ClipboardChange onmatch="exclude" />
+</RuleGroup>
+-- EOF Code --
+
+and/or 
+
+-- Code --
+`- ClipboardChange onmatch: exclude` :contentReference[oaicite:1]{index=1}  
+-- EOF Code --
+
+To prevent the secondary process from spawning: Remove the <ClipboardChange> rule entirely from your configuration file. By default, Sysmon will not monitor events that are not defined in the config file.
+
+PD: I bet you thought that was suspicious that sysmon was running inside c:\windows and not c:\windows\system32, me too, it installs in c:\windows by default, dont worry, its normal
